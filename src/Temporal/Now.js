@@ -1,0 +1,10 @@
+export const instant = () => Temporal.Now.instant();
+export const zonedDateTimeISO = () => Temporal.Now.zonedDateTimeISO();
+export const zonedDateTimeISOIn = (tz) => () => Temporal.Now.zonedDateTimeISO(tz);
+export const plainDateTimeISO = () => Temporal.Now.plainDateTimeISO();
+export const plainDateTimeISOIn = (tz) => () => Temporal.Now.plainDateTimeISO(tz);
+export const plainDateISO = () => Temporal.Now.plainDateISO();
+export const plainDateISOIn = (tz) => () => Temporal.Now.plainDateISO(tz);
+export const plainTimeISO = () => Temporal.Now.plainTimeISO();
+export const plainTimeISOIn = (tz) => () => Temporal.Now.plainTimeISO(tz);
+export const timeZoneId = () => Temporal.Now.timeZoneId();

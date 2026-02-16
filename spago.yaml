@@ -1,0 +1,19 @@
+workspace:
+  packageSet:
+    registry: 61.2.0
+
+package:
+  name: temporal
+  dependencies:
+    - prelude
+    - effect
+    - maybe
+    - js-bigints
+  test:
+    main: Test.Main
+    dependencies:
+      - spec
+      - spec-node
+      - spec-quickcheck
+      - quickcheck
+      - aff
