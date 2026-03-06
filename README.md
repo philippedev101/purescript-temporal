@@ -114,6 +114,10 @@ package:
 
 The package depends on `prelude`, `effect`, `maybe`, and `js-bigints`.
 
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
+
 ## Development
 
 
