@@ -124,9 +124,9 @@ Apache 2.0 — see [LICENSE](LICENSE).
 ```
 Requires `purs`, `spago`, and `bun`.
 
-bun install              # install JS polyfill
-spago build              # compile
-bun test-runner.mjs      # run tests
+bun install                                     # install JS polyfill
+spago build                                     # compile
+NODE_OPTIONS="--import=./polyfill.mjs" spago test  # run tests
 ```
 
 Tests include both example-based specs and QuickCheck property tests verifying algebraic laws (round-trip serialization, arithmetic inverses, comparison reflexivity, etc.) across thousands of random inputs.
