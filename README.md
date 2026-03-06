@@ -120,12 +120,11 @@ Apache 2.0 — see [LICENSE](LICENSE).
 
 ## Development
 
-
-```
 Requires `purs`, `spago`, and `bun`.
 
-bun install                                     # install JS polyfill
-spago build                                     # compile
+```
+bun install                                        # install JS polyfill
+spago build                                        # compile
 NODE_OPTIONS="--import=./polyfill.mjs" spago test  # run tests
 ```
 
