@@ -5,6 +5,7 @@ import Prelude
 import Data.Maybe (Maybe(..), isJust, isNothing)
 import Temporal.Duration as D
 import Temporal.PlainDate as PD
+import Temporal.PlainDate.Extra as PDX
 import Temporal.PlainYearMonth as PYM
 import Temporal.PlainMonthDay as PMD
 import Temporal.Internal.Options (Overflow(..))
@@ -92,7 +93,7 @@ spec = describe "Temporal.PlainDate" do
     it "calculates difference" do
       case PD.plainDate 2024 1 1, PD.plainDate 2024 3 15 of
         Just d1, Just d2 -> do
-          let dur = PD.until' d1 d2
+          let dur = PDX.until' d1 d2
           D.getMonths dur `shouldEqual` 2.0
           D.getDays dur `shouldEqual` 14.0
         _, _ -> pure unit

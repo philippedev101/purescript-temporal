@@ -5,6 +5,7 @@ import Prelude
 import Data.Maybe (Maybe(..), isJust, isNothing)
 import Temporal.Duration as D
 import Temporal.PlainTime as PT
+import Temporal.PlainTime.Extra as PTX
 import Temporal.Internal.Options (TimeUnit(..))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
@@ -59,7 +60,7 @@ spec = describe "Temporal.PlainTime" do
     it "calculates difference" do
       case PT.plainTime (PT.defaultPlainTimeFields { hour = 10 }), PT.plainTime (PT.defaultPlainTimeFields { hour = 12, minute = 30 }) of
         Just t1, Just t2 -> do
-          let dur = PT.until' t1 t2
+          let dur = PTX.until' t1 t2
           D.getHours dur `shouldEqual` 2.0
           D.getMinutes dur `shouldEqual` 30.0
         _, _ -> pure unit
@@ -98,6 +99,23 @@ spec = describe "Temporal.PlainTime" do
       PT.getHour (top :: PT.PlainTime) `shouldEqual` 23
       PT.getMinute (top :: PT.PlainTime) `shouldEqual` 59
 
+  describe "constants" do
+    it "midnight is 00:00:00" do
+      PT.getHour PTX.midnight `shouldEqual` 0
+      PT.getMinute PTX.midnight `shouldEqual` 0
+      PT.getSecond PTX.midnight `shouldEqual` 0
+
+    it "midnight == bottom" do
+      PTX.midnight `shouldEqual` (bottom :: PT.PlainTime)
+
+    it "noon is 12:00:00" do
+      PT.getHour PTX.noon `shouldEqual` 12
+      PT.getMinute PTX.noon `shouldEqual` 0
+      PT.getSecond PTX.noon `shouldEqual` 0
+
+    it "midnight < noon" do
+      (PTX.midnight < PTX.noon) `shouldEqual` true
+
   describe "properties" do
     it "add then subtract is identity" $
       quickCheck \(ArbTimeDuration d) (ArbPlainTime t) ->
@@ -105,11 +123,11 @@ spec = describe "Temporal.PlainTime" do
 
     it "until' a b == negated (since' a b)" $
       quickCheck \(ArbPlainTime a) (ArbPlainTime b) ->
-        PT.until' a b === D.negated (PT.since' a b)
+        PTX.until' a b === D.negated (PTX.since' a b)
 
     it "add (until' a b) a == b" $
       quickCheck \(ArbPlainTime a) (ArbPlainTime b) ->
-        PT.add (PT.until' a b) a === b
+        PT.add (PTX.until' a b) a === b
 
     it "toString / fromString round-trip" $
       quickCheck \(ArbPlainTime t) ->

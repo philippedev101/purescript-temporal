@@ -31,3 +31,28 @@ export const plainMonthDayToString = (md) => md.toString();
 // ZonedDateTime
 export const zonedDateTimeCompare = (a) => (b) => Temporal.ZonedDateTime.compare(a, b);
 export const zonedDateTimeToString = (zdt) => zdt.toString();
+
+// fromString impls (for the Argonaut DecodeJson instances). Each parses an
+// ISO-8601 string, returning `nothing` on any parse error.
+//
+// Temporal.from is strict per RFC 9557 and rejects fractional seconds with
+// more than 9 digits (nanosecond precision). Producers like Haskell/aeson can
+// emit up to 12 (picosecond) digits, so for the lenient JSON-decode path we
+// truncate any sub-nanosecond fractional digits before parsing. This affects
+// only the JSON codecs, not the strict public `fromString`.
+const truncateSubNano = (s) => s.replace(/(\.\d{9})\d+/, "$1");
+const parseVia = (ctor) => (just) => (nothing) => (s) => {
+  try {
+    return just(ctor.from(truncateSubNano(s)));
+  } catch (_) {
+    return nothing;
+  }
+};
+export const durationFromStringImpl = parseVia(Temporal.Duration);
+export const instantFromStringImpl = parseVia(Temporal.Instant);
+export const plainDateFromStringImpl = parseVia(Temporal.PlainDate);
+export const plainTimeFromStringImpl = parseVia(Temporal.PlainTime);
+export const plainDateTimeFromStringImpl = parseVia(Temporal.PlainDateTime);
+export const plainYearMonthFromStringImpl = parseVia(Temporal.PlainYearMonth);
+export const plainMonthDayFromStringImpl = parseVia(Temporal.PlainMonthDay);
+export const zonedDateTimeFromStringImpl = parseVia(Temporal.ZonedDateTime);

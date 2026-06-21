@@ -5,6 +5,14 @@ module Temporal.Internal.Types where
 
 import Prelude
 
+import Data.Argonaut.Core (Json)
+import Data.Argonaut.Core (fromString, toString) as J
+import Data.Argonaut.Decode.Class (class DecodeJson)
+import Data.Argonaut.Decode.Error (JsonDecodeError(..))
+import Data.Argonaut.Encode.Class (class EncodeJson)
+import Data.Either (Either(..), note)
+import Data.Maybe (Maybe(..), maybe)
+
 -- | A length of time expressed as a combination of date and time components
 -- | (years, months, weeks, days, hours, minutes, seconds, milliseconds,
 -- | microseconds, nanoseconds). All components must share the same sign.
@@ -184,3 +192,67 @@ instance ordZonedDateTime :: Ord ZonedDateTime where
 
 instance showZonedDateTime :: Show ZonedDateTime where
   show zdt = "(ZonedDateTime " <> zonedDateTimeToString zdt <> ")"
+
+--------------------------------------------------------------------------------
+-- Argonaut (JSON) instances
+--
+-- Every Temporal type round-trips as an ISO-8601 string via its `toString` /
+-- `from` methods. These live here (the module that defines the types) so they
+-- are not orphan instances. Encoding is lossless; decoding fails with a
+-- JsonDecodeError on a non-string or an unparseable string.
+--------------------------------------------------------------------------------
+
+foreign import durationFromStringImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> String -> Maybe Duration
+foreign import instantFromStringImpl :: (Instant -> Maybe Instant) -> Maybe Instant -> String -> Maybe Instant
+foreign import plainDateFromStringImpl :: (PlainDate -> Maybe PlainDate) -> Maybe PlainDate -> String -> Maybe PlainDate
+foreign import plainTimeFromStringImpl :: (PlainTime -> Maybe PlainTime) -> Maybe PlainTime -> String -> Maybe PlainTime
+foreign import plainDateTimeFromStringImpl :: (PlainDateTime -> Maybe PlainDateTime) -> Maybe PlainDateTime -> String -> Maybe PlainDateTime
+foreign import plainYearMonthFromStringImpl :: (PlainYearMonth -> Maybe PlainYearMonth) -> Maybe PlainYearMonth -> String -> Maybe PlainYearMonth
+foreign import plainMonthDayFromStringImpl :: (PlainMonthDay -> Maybe PlainMonthDay) -> Maybe PlainMonthDay -> String -> Maybe PlainMonthDay
+foreign import zonedDateTimeFromStringImpl :: (ZonedDateTime -> Maybe ZonedDateTime) -> Maybe ZonedDateTime -> String -> Maybe ZonedDateTime
+
+-- | Decode a JSON string with the given parser, failing with a JsonDecodeError.
+decodeIsoVia :: forall a. (String -> Maybe a) -> Json -> Either JsonDecodeError a
+decodeIsoVia parse json =
+  maybe (Left (TypeMismatch "String")) Right (J.toString json)
+    >>= \s -> note (UnexpectedValue json) (parse s)
+
+instance encodeJsonDuration :: EncodeJson Duration where
+  encodeJson = J.fromString <<< durationToString
+instance decodeJsonDuration :: DecodeJson Duration where
+  decodeJson = decodeIsoVia (durationFromStringImpl Just Nothing)
+
+instance encodeJsonInstant :: EncodeJson Instant where
+  encodeJson = J.fromString <<< instantToString
+instance decodeJsonInstant :: DecodeJson Instant where
+  decodeJson = decodeIsoVia (instantFromStringImpl Just Nothing)
+
+instance encodeJsonPlainDate :: EncodeJson PlainDate where
+  encodeJson = J.fromString <<< plainDateToString
+instance decodeJsonPlainDate :: DecodeJson PlainDate where
+  decodeJson = decodeIsoVia (plainDateFromStringImpl Just Nothing)
+
+instance encodeJsonPlainTime :: EncodeJson PlainTime where
+  encodeJson = J.fromString <<< plainTimeToString
+instance decodeJsonPlainTime :: DecodeJson PlainTime where
+  decodeJson = decodeIsoVia (plainTimeFromStringImpl Just Nothing)
+
+instance encodeJsonPlainDateTime :: EncodeJson PlainDateTime where
+  encodeJson = J.fromString <<< plainDateTimeToString
+instance decodeJsonPlainDateTime :: DecodeJson PlainDateTime where
+  decodeJson = decodeIsoVia (plainDateTimeFromStringImpl Just Nothing)
+
+instance encodeJsonPlainYearMonth :: EncodeJson PlainYearMonth where
+  encodeJson = J.fromString <<< plainYearMonthToString
+instance decodeJsonPlainYearMonth :: DecodeJson PlainYearMonth where
+  decodeJson = decodeIsoVia (plainYearMonthFromStringImpl Just Nothing)
+
+instance encodeJsonPlainMonthDay :: EncodeJson PlainMonthDay where
+  encodeJson = J.fromString <<< plainMonthDayToString
+instance decodeJsonPlainMonthDay :: DecodeJson PlainMonthDay where
+  decodeJson = decodeIsoVia (plainMonthDayFromStringImpl Just Nothing)
+
+instance encodeJsonZonedDateTime :: EncodeJson ZonedDateTime where
+  encodeJson = J.fromString <<< zonedDateTimeToString
+instance decodeJsonZonedDateTime :: DecodeJson ZonedDateTime where
+  decodeJson = decodeIsoVia (zonedDateTimeFromStringImpl Just Nothing)

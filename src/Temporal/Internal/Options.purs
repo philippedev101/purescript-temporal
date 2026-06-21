@@ -7,6 +7,13 @@ module Temporal.Internal.Options where
 
 import Prelude
 
+import Data.Argonaut.Decode.Class (class DecodeJson)
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode.Class (class EncodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
+import Data.Generic.Rep (class Generic)
+import Temporal.Internal.Types (PlainDate, PlainDateTime, ZonedDateTime)
+
 -- | Rounding modes matching TC39 Temporal specification.
 -- |
 -- | - `HalfExpand` (default) — round half toward positive infinity ("normal" rounding)
@@ -192,3 +199,59 @@ instance showDateTimeUnit :: Show DateTimeUnit where
 dateTimeUnitToString :: DateTimeUnit -> String
 dateTimeUnitToString (DateU u) = dateUnitToString u
 dateTimeUnitToString (TimeU u) = timeUnitToString u
+
+-- | A reference point for calendar-aware `Duration` operations (`round`,
+-- | `total`, `add`, `subtract`, `compare`).
+-- |
+-- | - `RelDate` — resolves calendar ambiguity (month/year lengths). All days
+-- |   are treated as exactly 24 hours. The duration is anchored at midnight.
+-- | - `RelDateTime` — same as `RelDate` but anchored at the given wall-clock
+-- |   time, which affects how hours cross day boundaries.
+-- | - `RelZoned` — resolves calendar ambiguity **and** DST. Days may be 23 or
+-- |   25 hours near DST transitions.
+data RelativeTo
+  = RelDate PlainDate
+  | RelDateTime PlainDateTime
+  | RelZoned ZonedDateTime
+
+--------------------------------------------------------------------------------
+-- Generic + JSON instances for the option / unit enums. JSON is the standard
+-- argonaut generic encoding (tagged). Value-carrying variants (RelativeTo)
+-- round-trip via the Temporal value instances.
+--------------------------------------------------------------------------------
+
+derive instance genericRoundingMode :: Generic RoundingMode _
+instance encodeJsonRoundingMode :: EncodeJson RoundingMode where encodeJson = genericEncodeJson
+instance decodeJsonRoundingMode :: DecodeJson RoundingMode where decodeJson = genericDecodeJson
+
+derive instance genericOverflow :: Generic Overflow _
+instance encodeJsonOverflow :: EncodeJson Overflow where encodeJson = genericEncodeJson
+instance decodeJsonOverflow :: DecodeJson Overflow where decodeJson = genericDecodeJson
+
+derive instance genericDisambiguation :: Generic Disambiguation _
+instance encodeJsonDisambiguation :: EncodeJson Disambiguation where encodeJson = genericEncodeJson
+instance decodeJsonDisambiguation :: DecodeJson Disambiguation where decodeJson = genericDecodeJson
+
+derive instance genericOffsetDisambiguation :: Generic OffsetDisambiguation _
+instance encodeJsonOffsetDisambiguation :: EncodeJson OffsetDisambiguation where encodeJson = genericEncodeJson
+instance decodeJsonOffsetDisambiguation :: DecodeJson OffsetDisambiguation where decodeJson = genericDecodeJson
+
+derive instance genericTransitionDirection :: Generic TransitionDirection _
+instance encodeJsonTransitionDirection :: EncodeJson TransitionDirection where encodeJson = genericEncodeJson
+instance decodeJsonTransitionDirection :: DecodeJson TransitionDirection where decodeJson = genericDecodeJson
+
+derive instance genericDateUnit :: Generic DateUnit _
+instance encodeJsonDateUnit :: EncodeJson DateUnit where encodeJson = genericEncodeJson
+instance decodeJsonDateUnit :: DecodeJson DateUnit where decodeJson = genericDecodeJson
+
+derive instance genericTimeUnit :: Generic TimeUnit _
+instance encodeJsonTimeUnit :: EncodeJson TimeUnit where encodeJson = genericEncodeJson
+instance decodeJsonTimeUnit :: DecodeJson TimeUnit where decodeJson = genericDecodeJson
+
+derive instance genericDateTimeUnit :: Generic DateTimeUnit _
+instance encodeJsonDateTimeUnit :: EncodeJson DateTimeUnit where encodeJson = genericEncodeJson
+instance decodeJsonDateTimeUnit :: DecodeJson DateTimeUnit where decodeJson = genericDecodeJson
+
+derive instance genericRelativeTo :: Generic RelativeTo _
+instance encodeJsonRelativeTo :: EncodeJson RelativeTo where encodeJson = genericEncodeJson
+instance decodeJsonRelativeTo :: DecodeJson RelativeTo where decodeJson = genericDecodeJson

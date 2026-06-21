@@ -9,11 +9,13 @@
 -- |   auto-convert to `{ days: 1, hours: 12 }`. Use `round` to rebalance.
 -- | - **Eq is structural**: `hours 1.0 /= minutes 60.0` because `Eq` compares
 -- |   component-by-component, not total elapsed time.
--- | - **Calendar operations need context**: `round`, `total`, and `add`/`subtract`
--- |   may return `Nothing` when calendar units (years, months, weeks) are involved,
--- |   because their real-world length depends on a reference date.
+-- | - **Calendar operations need context**: `round`, `total`, `add`, `subtract`,
+-- |   and `compare` may return `Nothing` (or throw) when calendar units (years,
+-- |   months, weeks) are involved and no `relativeTo` is provided, because their
+-- |   real-world length depends on a reference date.
 module Temporal.Duration
   ( module Temporal.Internal.Types
+  , module ReExportedOptions
   , DurationFields
   , defaultDurationFields
   , duration
@@ -47,15 +49,20 @@ module Temporal.Duration
   , DurationRoundOptions
   , defaultDurationRoundOptions
   , round
+  , DurationTotalOptions
+  , defaultDurationTotalOptions
   , total
+  , compare
   , toString
+  , zero
   ) where
 
 import Prelude hiding (add)
 
 import Data.Maybe (Maybe(..))
-import Temporal.Internal.Options (DateTimeUnit(..), RoundingMode(..), TimeUnit(..), dateTimeUnitToString, roundingModeToString)
-import Temporal.Internal.Types (Duration)
+import Temporal.Internal.Options (DateTimeUnit(..), DateUnit(..), RelativeTo(..), RoundingMode(..), TimeUnit(..)) as ReExportedOptions
+import Temporal.Internal.Options (DateTimeUnit(..), RelativeTo(..), RoundingMode(..), TimeUnit(..), dateTimeUnitToString, roundingModeToString)
+import Temporal.Internal.Types (Duration, PlainDate, PlainDateTime, ZonedDateTime)
 
 -- | All fields of a `Duration`. Every field defaults to `0.0` — set only the
 -- | fields you need.
@@ -149,6 +156,10 @@ microseconds n = unsafeDuration (defaultDurationFields { microseconds = n })
 nanoseconds :: Number -> Duration
 nanoseconds n = unsafeDuration (defaultDurationFields { nanoseconds = n })
 
+-- | The zero duration (all fields 0). `blank zero == true`.
+zero :: Duration
+zero = unsafeDuration defaultDurationFields
+
 -- Properties
 foreign import getYears :: Duration -> Number
 foreign import getMonths :: Duration -> Number
@@ -169,15 +180,26 @@ foreign import blank :: Duration -> Boolean
 
 -- Arithmetic
 
--- | Add two durations. Returns `Nothing` if the durations involve calendar
--- | units (years, months, weeks) — use date arithmetic with a reference date
--- | instead: `startDate # add dur1 >>= add dur2 >>= \d -> since' d startDate`.
-add :: Duration -> Duration -> Maybe Duration
-add a b = addImpl Just Nothing a b
+-- | Add two durations. Returns `Nothing` if the result would have mixed signs.
+-- |
+-- | When adding durations that contain calendar units (years, months, weeks),
+-- | a `relativeTo` reference point is required to resolve the variable length
+-- | of those units.
+-- |
+-- | ```purescript
+-- | -- Time-only: no relativeTo needed
+-- | add Nothing (hours 1.0) (hours 2.0)  -- Just PT3H
+-- |
+-- | -- Calendar units: provide a reference date
+-- | add (Just (RelDate someDate)) (months 1.0) (months 2.0)  -- Just P3M
+-- | ```
+add :: Maybe RelativeTo -> Duration -> Duration -> Maybe Duration
+add rel a b = addImpl Just Nothing (maybeRelativeToJS rel) a b
 
--- | Subtract one duration from another. Same calendar-unit caveats as `add`.
-subtract :: Duration -> Duration -> Maybe Duration
-subtract a b = subtractImpl Just Nothing a b
+-- | Subtract one duration from another. Same caveats as `add` regarding
+-- | calendar units and `relativeTo`.
+subtract :: Maybe RelativeTo -> Duration -> Duration -> Maybe Duration
+subtract rel a b = subtractImpl Just Nothing (maybeRelativeToJS rel) a b
 
 -- | Return the duration with all component signs flipped.
 -- | `negated (negated d) == d` for all durations.
@@ -192,11 +214,16 @@ foreign import abs :: Duration -> Duration
 -- | Options for `round`. The `roundingIncrement` must evenly divide the
 -- | next-larger unit's maximum (e.g. for minutes: 1, 2, 3, 4, 5, 6, 10,
 -- | 12, 15, 20, 30).
+-- |
+-- | When `relativeTo` is `Nothing`, rounding fails for durations with calendar
+-- | units. Provide a `RelDate` or `RelDateTime` for calendar-aware rounding,
+-- | or a `RelZoned` for DST-aware rounding.
 type DurationRoundOptions =
   { largestUnit :: DateTimeUnit
   , smallestUnit :: DateTimeUnit
   , roundingIncrement :: Int
   , roundingMode :: RoundingMode
+  , relativeTo :: Maybe RelativeTo
   }
 
 defaultDurationRoundOptions :: DurationRoundOptions
@@ -205,17 +232,26 @@ defaultDurationRoundOptions =
   , smallestUnit: TimeU Nanoseconds
   , roundingIncrement: 1
   , roundingMode: HalfExpand
+  , relativeTo: Nothing
   }
 
--- | Round and/or rebalance a duration. Returns `Nothing` if calendar units
--- | are involved (this binding does not support the `relativeTo` option).
+-- | Round and/or rebalance a duration. Returns `Nothing` if the operation
+-- | fails (e.g. calendar units without `relativeTo`).
 -- |
 -- | To rebalance without rounding, set `largestUnit` to the desired largest
 -- | unit:
 -- |
 -- | ```purescript
+-- | -- Time-only rebalancing
 -- | round (defaultDurationRoundOptions { largestUnit = TimeU Hours }) (minutes 90.0)
--- | -- Just (Duration PT2H) — rebalanced from 90 minutes to 1h30m, then rounded to hours
+-- | -- Just PT1H30M
+-- |
+-- | -- Calendar-aware rebalancing
+-- | round (defaultDurationRoundOptions
+-- |   { largestUnit = DateU Years
+-- |   , relativeTo = Just (RelDate someDate)
+-- |   }) (months 18.0)
+-- | -- Just P1Y6M
 -- | ```
 round :: DurationRoundOptions -> Duration -> Maybe Duration
 round opts d = roundImpl Just Nothing
@@ -224,26 +260,95 @@ round opts d = roundImpl Just Nothing
   , roundingIncrement: opts.roundingIncrement
   , roundingMode: roundingModeToString opts.roundingMode
   }
+  (maybeRelativeToJS opts.relativeTo)
   d
 
+-- | Options for `total`.
+-- |
+-- | When `relativeTo` is `Nothing`, computing the total fails for durations
+-- | with calendar units. Provide a reference point to resolve calendar
+-- | ambiguity.
+type DurationTotalOptions =
+  { unit :: DateTimeUnit
+  , relativeTo :: Maybe RelativeTo
+  }
+
+defaultDurationTotalOptions :: DurationTotalOptions
+defaultDurationTotalOptions =
+  { unit: TimeU Nanoseconds
+  , relativeTo: Nothing
+  }
+
 -- | Compute the total duration in the given unit as a fractional number.
--- | Returns `Nothing` if calendar units are involved (this binding does not
--- | support the `relativeTo` option).
+-- | Returns `Nothing` if the operation fails (e.g. calendar units without
+-- | `relativeTo`).
 -- |
 -- | ```purescript
--- | total (TimeU Minutes) (hours 1.0)  -- Just 60.0
+-- | -- Time-only
+-- | total { unit: TimeU Minutes, relativeTo: Nothing } (hours 1.0)
+-- | -- Just 60.0
+-- |
+-- | -- Calendar-aware: "how many months is 45 days from Jan 1?"
+-- | total { unit: DateU Months, relativeTo: Just (RelDate jan1) } (days 45.0)
+-- | -- Just 1.5 (approximately)
 -- | ```
-total :: DateTimeUnit -> Duration -> Maybe Number
-total unit d = totalImpl Just Nothing (dateTimeUnitToString unit) d
+total :: DurationTotalOptions -> Duration -> Maybe Number
+total opts d = totalImpl Just Nothing
+  (dateTimeUnitToString opts.unit)
+  (maybeRelativeToJS opts.relativeTo)
+  d
+
+
+-- | Compare two durations relative to a reference point, returning their
+-- | ordering.
+-- |
+-- | Unlike `Eq` (which compares component-by-component), `compare` resolves
+-- | durations to actual elapsed time from the reference point. This means
+-- | `compare ref (days 30.0) (months 1.0)` can determine which is longer
+-- | for a specific starting date.
+-- |
+-- | A `relativeTo` is always required because even time-only durations are
+-- | compared via the Temporal spec's `Duration.compare` static method.
+-- |
+-- | ```purescript
+-- | compare (RelDate jan1) (days 31.0) (months 1.0)  -- EQ (January has 31 days)
+-- | compare (RelDate feb1) (days 30.0) (months 1.0)  -- GT (February has 28 days)
+-- | ```
+compare :: RelativeTo -> Duration -> Duration -> Ordering
+compare rel a b = case compareImpl (relativeToJS rel) a b of
+  x | x < 0 -> LT
+  x | x > 0 -> GT
+  _ -> EQ
 
 -- | Serialize to an ISO 8601 duration string (e.g. `"PT1H30M"`).
 foreign import toString :: Duration -> String
+
+-- Internal: RelativeTo JS conversion
+
+-- | Opaque JS value representing either a Temporal date/datetime/zoneddatetime
+-- | or null.
+foreign import data RelativeToJS :: Type
+
+foreign import noRelativeToJS :: RelativeToJS
+foreign import relDateToJS :: PlainDate -> RelativeToJS
+foreign import relDateTimeToJS :: PlainDateTime -> RelativeToJS
+foreign import relZonedToJS :: ZonedDateTime -> RelativeToJS
+
+relativeToJS :: RelativeTo -> RelativeToJS
+relativeToJS (RelDate d) = relDateToJS d
+relativeToJS (RelDateTime dt) = relDateTimeToJS dt
+relativeToJS (RelZoned z) = relZonedToJS z
+
+maybeRelativeToJS :: Maybe RelativeTo -> RelativeToJS
+maybeRelativeToJS Nothing = noRelativeToJS
+maybeRelativeToJS (Just rel) = relativeToJS rel
 
 -- FFI imports
 foreign import durationImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> DurationFields -> Maybe Duration
 foreign import fromStringImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> String -> Maybe Duration
 foreign import unsafeDuration :: DurationFields -> Duration
-foreign import addImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> Duration -> Duration -> Maybe Duration
-foreign import subtractImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> Duration -> Duration -> Maybe Duration
-foreign import roundImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> { largestUnit :: String, smallestUnit :: String, roundingIncrement :: Int, roundingMode :: String } -> Duration -> Maybe Duration
-foreign import totalImpl :: (Number -> Maybe Number) -> Maybe Number -> String -> Duration -> Maybe Number
+foreign import addImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> RelativeToJS -> Duration -> Duration -> Maybe Duration
+foreign import subtractImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> RelativeToJS -> Duration -> Duration -> Maybe Duration
+foreign import roundImpl :: (Duration -> Maybe Duration) -> Maybe Duration -> { largestUnit :: String, smallestUnit :: String, roundingIncrement :: Int, roundingMode :: String } -> RelativeToJS -> Duration -> Maybe Duration
+foreign import totalImpl :: (Number -> Maybe Number) -> Maybe Number -> String -> RelativeToJS -> Duration -> Maybe Number
+foreign import compareImpl :: RelativeToJS -> Duration -> Duration -> Int

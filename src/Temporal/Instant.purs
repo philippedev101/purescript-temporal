@@ -26,8 +26,6 @@ module Temporal.Instant
   , defaultInstantDiffOptions
   , since
   , until
-  , since'
-  , until'
   , InstantRoundOptions
   , defaultInstantRoundOptions
   , round
@@ -124,13 +122,6 @@ until opts other self = untilImpl
   }
   other self
 
--- | `since' a b` — duration from `b` to `a` with default options.
-since' :: Instant -> Instant -> Duration
-since' = since defaultInstantDiffOptions
-
--- | `until' a b` — duration from `a` to `b` with default options.
-until' :: Instant -> Instant -> Duration
-until' = until defaultInstantDiffOptions
 
 -- Round
 

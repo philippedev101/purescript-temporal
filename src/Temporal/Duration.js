@@ -38,17 +38,19 @@ export const getNanoseconds = (d) => d.nanoseconds;
 export const sign = (d) => d.sign;
 export const blank = (d) => d.blank;
 
-export const addImpl = (just) => (nothing) => (a) => (b) => {
+export const addImpl = (just) => (nothing) => (relativeTo) => (a) => (b) => {
   try {
-    return just(a.add(b));
+    const opts = relativeTo === null ? undefined : { relativeTo };
+    return just(a.add(b, opts));
   } catch (_) {
     return nothing;
   }
 };
 
-export const subtractImpl = (just) => (nothing) => (a) => (b) => {
+export const subtractImpl = (just) => (nothing) => (relativeTo) => (a) => (b) => {
   try {
-    return just(a.subtract(b));
+    const opts = relativeTo === null ? undefined : { relativeTo };
+    return just(a.subtract(b, opts));
   } catch (_) {
     return nothing;
   }
@@ -57,20 +59,32 @@ export const subtractImpl = (just) => (nothing) => (a) => (b) => {
 export const negated = (d) => d.negated();
 export const abs = (d) => d.abs();
 
-export const roundImpl = (just) => (nothing) => (opts) => (d) => {
+export const roundImpl = (just) => (nothing) => (opts) => (relativeTo) => (d) => {
   try {
-    return just(d.round(opts));
+    const roundOpts = { ...opts };
+    if (relativeTo !== null) roundOpts.relativeTo = relativeTo;
+    return just(d.round(roundOpts));
   } catch (_) {
     return nothing;
   }
 };
 
-export const totalImpl = (just) => (nothing) => (unit) => (d) => {
+export const totalImpl = (just) => (nothing) => (unit) => (relativeTo) => (d) => {
   try {
-    return just(d.total(unit));
+    const opts = relativeTo === null ? unit : { unit, relativeTo };
+    return just(d.total(opts));
   } catch (_) {
     return nothing;
   }
 };
+
+export const compareImpl = (relativeTo) => (a) => (b) =>
+  Temporal.Duration.compare(a, b, { relativeTo });
 
 export const toString = (d) => d.toString();
+
+// RelativeTo helpers — identity at runtime, exist for PureScript type safety
+export const noRelativeToJS = null;
+export const relDateToJS = (d) => d;
+export const relDateTimeToJS = (dt) => dt;
+export const relZonedToJS = (z) => z;

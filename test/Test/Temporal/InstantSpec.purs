@@ -6,6 +6,7 @@ import Data.Maybe (Maybe(..), isJust, isNothing)
 import JS.BigInt as BigInt
 import Temporal.Duration as D
 import Temporal.Instant as I
+import Temporal.Instant.Extra as IX
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 import Test.Spec.QuickCheck (quickCheck)
@@ -64,7 +65,7 @@ spec = describe "Temporal.Instant" do
     it "calculates difference in hours" do
       case I.fromEpochMilliseconds 0.0, I.fromEpochMilliseconds 7200000.0 of
         Just i1, Just i2 -> do
-          let dur = I.until' i1 i2
+          let dur = IX.until' i1 i2
           D.getHours dur `shouldEqual` 2.0
         _, _ -> pure unit
 

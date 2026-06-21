@@ -29,8 +29,6 @@ module Temporal.PlainTime
   , defaultPlainTimeDiffOptions
   , since
   , until
-  , since'
-  , until'
   , PlainTimeRoundOptions
   , defaultPlainTimeRoundOptions
   , round
@@ -155,13 +153,6 @@ until opts a b = untilImpl
   }
   a b
 
--- | `since' a b` — duration from `b` to `a` with default options.
-since' :: PlainTime -> PlainTime -> Duration
-since' = since defaultPlainTimeDiffOptions
-
--- | `until' a b` — duration from `a` to `b` with default options.
-until' :: PlainTime -> PlainTime -> Duration
-until' = until defaultPlainTimeDiffOptions
 
 -- Round
 
@@ -194,6 +185,7 @@ foreign import toPlainDateTime :: PlainDate -> PlainTime -> PlainDateTime
 -- | Serialize to an ISO 8601 time string (e.g. `"10:30:00"`).
 -- | Trailing zero components are omitted.
 foreign import toString :: PlainTime -> String
+
 
 -- FFI imports
 foreign import plainTimeImpl :: (PlainTime -> Maybe PlainTime) -> Maybe PlainTime -> PlainTimeFields -> Maybe PlainTime

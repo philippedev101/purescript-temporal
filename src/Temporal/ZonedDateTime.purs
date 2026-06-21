@@ -58,8 +58,6 @@ module Temporal.ZonedDateTime
   , defaultZonedDateTimeDiffOptions
   , since
   , until
-  , since'
-  , until'
   , ZonedDateTimeRoundOptions
   , defaultZonedDateTimeRoundOptions
   , round
@@ -286,13 +284,6 @@ until opts other self = untilImpl
   }
   other self
 
--- | `since' a b` — duration from `b` to `a` with default options.
-since' :: ZonedDateTime -> ZonedDateTime -> Duration
-since' = since defaultZonedDateTimeDiffOptions
-
--- | `until' a b` — duration from `a` to `b` with default options.
-until' :: ZonedDateTime -> ZonedDateTime -> Duration
-until' = until defaultZonedDateTimeDiffOptions
 
 -- Round
 

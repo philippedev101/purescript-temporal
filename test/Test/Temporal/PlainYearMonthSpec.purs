@@ -5,6 +5,7 @@ import Prelude
 import Data.Maybe (Maybe(..), isJust, isNothing)
 import Temporal.Duration as D
 import Temporal.PlainYearMonth as PYM
+import Temporal.PlainYearMonth.Extra as PYMX
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual, shouldSatisfy)
 
@@ -62,7 +63,7 @@ spec = describe "Temporal.PlainYearMonth" do
     it "calculates difference" do
       case PYM.plainYearMonth 2024 1, PYM.plainYearMonth 2024 6 of
         Just ym1, Just ym2 -> do
-          let dur = PYM.until' ym1 ym2
+          let dur = PYMX.until' ym1 ym2
           D.getMonths dur `shouldEqual` 5.0
         _, _ -> pure unit
 

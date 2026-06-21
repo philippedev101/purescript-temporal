@@ -38,8 +38,6 @@ module Temporal.PlainDate
   , defaultPlainDateDiffOptions
   , since
   , until
-  , since'
-  , until'
   , toPlainDateTime
   , toPlainYearMonth
   , toPlainMonthDay
@@ -175,13 +173,6 @@ until opts other self = untilImpl
   }
   other self
 
--- | `since' a b` — duration from `b` to `a` with default options.
-since' :: PlainDate -> PlainDate -> Duration
-since' = since defaultPlainDateDiffOptions
-
--- | `until' a b` — duration from `a` to `b` with default options.
-until' :: PlainDate -> PlainDate -> Duration
-until' = until defaultPlainDateDiffOptions
 
 -- Conversions
 

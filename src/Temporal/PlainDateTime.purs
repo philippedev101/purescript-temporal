@@ -39,8 +39,6 @@ module Temporal.PlainDateTime
   , defaultPlainDateTimeDiffOptions
   , since
   , until
-  , since'
-  , until'
   , PlainDateTimeRoundOptions
   , defaultPlainDateTimeRoundOptions
   , round
@@ -213,13 +211,6 @@ until opts other self = untilImpl
   }
   other self
 
--- | `since' a b` — duration from `b` to `a` with default options.
-since' :: PlainDateTime -> PlainDateTime -> Duration
-since' = since defaultPlainDateTimeDiffOptions
-
--- | `until' a b` — duration from `a` to `b` with default options.
-until' :: PlainDateTime -> PlainDateTime -> Duration
-until' = until defaultPlainDateTimeDiffOptions
 
 -- Round
 

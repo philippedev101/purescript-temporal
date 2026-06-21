@@ -21,8 +21,6 @@ module Temporal.PlainYearMonth
   , defaultPlainYearMonthDiffOptions
   , since
   , until
-  , since'
-  , until'
   , toPlainDate
   , toString
   ) where
@@ -120,13 +118,6 @@ until opts other self = untilImpl
   }
   other self
 
--- | `since' a b` — duration from `b` to `a` with default options.
-since' :: PlainYearMonth -> PlainYearMonth -> Duration
-since' = since defaultPlainYearMonthDiffOptions
-
--- | `until' a b` — duration from `a` to `b` with default options.
-until' :: PlainYearMonth -> PlainYearMonth -> Duration
-until' = until defaultPlainYearMonthDiffOptions
 
 -- Conversion
 

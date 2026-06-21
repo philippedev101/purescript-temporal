@@ -2,16 +2,20 @@ module Test.Temporal.Generators where
 
 import Prelude
 
+import Data.Array as A
 import Data.Int as Int
 import Data.Maybe (fromJust)
 import Partial.Unsafe (unsafePartial)
 import Temporal.Duration as D
 import Temporal.Instant as I
+import Temporal.Interval (Interval, unsafeInterval)
+import Temporal.Interval.Set as IS
 import Temporal.PlainDate as PD
 import Temporal.PlainDateTime as PDT
 import Temporal.PlainTime as PT
+import Temporal.PlainYearMonth as PYM
 import Test.QuickCheck (class Arbitrary)
-import Test.QuickCheck.Gen (Gen, chooseInt)
+import Test.QuickCheck.Gen (Gen, chooseInt, arrayOf)
 
 -- | Duration with arbitrary fields (small values, same sign).
 newtype ArbDuration = ArbDuration D.Duration
@@ -137,3 +141,50 @@ genInstant = do
   msInDay <- chooseInt 0 86399999
   let ms = Int.toNumber day * 86400000.0 + Int.toNumber msInDay
   pure $ unsafePartial $ fromJust $ I.fromEpochMilliseconds ms
+
+-- Interval generators
+
+-- | An interval over small positive Ints, guaranteed start < end.
+newtype ArbInterval = ArbInterval (Interval Int)
+
+instance Arbitrary ArbInterval where
+  arbitrary = ArbInterval <$> genInterval
+
+-- | A pair of intervals over small positive Ints.
+newtype ArbIntervalPair = ArbIntervalPair { a :: Interval Int, b :: Interval Int }
+
+instance Arbitrary ArbIntervalPair where
+  arbitrary = do
+    ia <- genInterval
+    ib <- genInterval
+    pure $ ArbIntervalPair { a: ia, b: ib }
+
+-- | An IntervalSet over small positive Ints.
+newtype ArbIntervalSet = ArbIntervalSet (IS.IntervalSet Int)
+
+instance Arbitrary ArbIntervalSet where
+  arbitrary = ArbIntervalSet <$> genIntervalSet
+
+genInterval :: Gen (Interval Int)
+genInterval = do
+  a <- chooseInt 0 100
+  len <- chooseInt 1 50
+  pure $ unsafeInterval a (a + len)
+
+genIntervalSet :: Gen (IS.IntervalSet Int)
+genIntervalSet = do
+  intervals <- arrayOf genInterval
+  pure $ IS.fromIntervals intervals
+
+-- PlainYearMonth generator
+
+newtype ArbPlainYearMonth = ArbPlainYearMonth PYM.PlainYearMonth
+
+instance Arbitrary ArbPlainYearMonth where
+  arbitrary = ArbPlainYearMonth <$> genPlainYearMonth
+
+genPlainYearMonth :: Gen PYM.PlainYearMonth
+genPlainYearMonth = do
+  y <- chooseInt 1970 2100
+  m <- chooseInt 1 12
+  pure $ unsafePartial $ fromJust $ PYM.plainYearMonth y m
